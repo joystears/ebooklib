@@ -15,7 +15,7 @@
 # along with EbookLib.  If not, see <http://www.gnu.org/licenses/>.
 
 import zipfile
-import six
+# import six
 import mimetypes
 import logging
 import uuid
@@ -62,14 +62,14 @@ CONTAINER_XML = '''<?xml version='1.0' encoding='utf-8'?>
 </container>
 '''
 
-NCX_XML = six.b('''<!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
-<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1" />''')
+NCX_XML = '''<!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1" />'''
 
-NAV_XML = six.b('''<?xml version="1.0" encoding="utf-8"?><!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"/>''')
+NAV_XML = '''<?xml version="1.0" encoding="utf-8"?><!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"/>'''
 
-CHAPTER_XML = six.b('''<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"  epub:prefix="z3998: http://www.daisy.org/z3998/2012/vocab/structure/#"></html>''')
+CHAPTER_XML = '''<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"  epub:prefix="z3998: http://www.daisy.org/z3998/2012/vocab/structure/#"></html>'''
 
-COVER_XML = six.b('''<?xml version="1.0" encoding="UTF-8"?>
+COVER_XML = '''<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="en" xml:lang="en">
  <head>
@@ -81,7 +81,7 @@ COVER_XML = six.b('''<?xml version="1.0" encoding="UTF-8"?>
  <body>
    <img src="" alt="" />
  </body>
-</html>''')
+</html>'''
 
 
 IMAGE_MEDIA_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/svg+xml']
@@ -120,7 +120,7 @@ class EpubItem(object):
     Base class for the items in a book.
     """
 
-    def __init__(self, uid=None, file_name='', media_type='', content=six.b(''), manifest=True):
+    def __init__(self, uid=None, file_name='', media_type='', content='', manifest=True):
         """
         :Args:
           - uid: Unique identifier for this item (optional)
@@ -180,13 +180,13 @@ class EpubItem(object):
         _, ext = zip_path.splitext(self.get_name())
         ext = ext.lower()
 
-        for uid, ext_list in six.iteritems(ebooklib.EXTENSIONS):
-            if ext in ext_list:
+        for uid in ebooklib.EXTENSIONS:
+            if ext in ebooklib.EXTENSIONS[uid]:
                 return uid
 
         return ebooklib.ITEM_UNKNOWN
 
-    def get_content(self, default=six.b('')):
+    def get_content(self, default=''):
         """
         Returns content of the item. Content should be of type 'str' (Python 2) or 'bytes' (Python 3)
 
@@ -345,8 +345,8 @@ class EpubHtml(EpubItem):
             tree_str = etree.tostring(body, pretty_print=True, encoding='utf-8', xml_declaration=False)
 
             # this is so stupid
-            if tree_str.startswith(six.b('<body>')):
-                n = tree_str.rindex(six.b('</body>'))
+            if tree_str.startswith('<body>'):
+                n = tree_str.rindex('</body>')
 
                 return tree_str[7:n]
 
@@ -870,10 +870,12 @@ class EpubWriter(object):
             mtime = datetime.datetime.now()
         el.text = mtime.strftime('%Y-%m-%dT%H:%M:%SZ')
 
-        for ns_name, values in six.iteritems(self.book.metadata):
+        for ns_name in self.book.metadata:
+            values = self.book.metadata[ns_name]
             if ns_name == NAMESPACES['OPF']:
-                for values in values.values():
-                    for v in values:
+                for k in values:
+                    values_list = values[k]
+                    for v in values_list:
                         if 'property' in v[1] and v[1]['property'] == "dcterms:modified":
                             continue
                         try:
@@ -883,8 +885,10 @@ class EpubWriter(object):
                         except ValueError:
                             logging.error('Could not create metadata.')
             else:
-                for name, values in six.iteritems(values):
-                    for v in values:
+                # print(values)
+                for name in values:
+                    values_list = values[name]
+                    for v in values_list:
                         try:
                             if ns_name:
                                 el = etree.SubElement(metadata, '{%s}%s' % (ns_name, name), v[1])
@@ -1262,10 +1266,11 @@ class EpubReader(object):
         metadata = self.container.find('{%s}%s' % (NAMESPACES['OPF'], 'metadata'))
 
         nsmap = metadata.nsmap
-        nstags = dict((k, '{%s}' % v) for k, v in six.iteritems(nsmap))
+        # nstags = dict((k, '{%s}' % v) for k, v in six.iteritems(nsmap))
+        nstags = dict((k, '{%s}' % nsmap[k]) for k in nsmap)
         default_ns = nstags.get(None, '')
 
-        nsdict = dict((v, {}) for v in nsmap.values())
+        nsdict = dict((nsmap[k], {}) for k in nsmap)
 
         def add_item(ns, tag, value, extra):
             if ns not in nsdict:
