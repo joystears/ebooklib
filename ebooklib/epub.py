@@ -1190,9 +1190,20 @@ class EpubWriter(object):
             elif isinstance(item, EpubNav):
                 self.out.writestr('%s/%s' % (self.book.FOLDER_NAME, item.file_name), self._get_nav(item))
             elif item.manifest:
-                self.out.writestr('%s/%s' % (self.book.FOLDER_NAME, item.file_name), item.get_content())
+                # self.out.writestr('%s/%s' % (self.book.FOLDER_NAME, item.file_name), item.get_content())
+                try:
+                    with self.out.open('%s/%s' % (self.book.FOLDER_NAME, item.file_name)) as tmp_file:
+                        print('Duplicated: %s/%s' % (self.book.FOLDER_NAME, item.file_name))
+                except:
+                    self.out.writestr('%s/%s' % (self.book.FOLDER_NAME, item.file_name), item.get_content())
             else:
-                self.out.writestr('%s' % item.file_name, item.get_content())
+                # self.out.writestr('%s' % item.file_name, item.get_content())
+                try:
+                    with self.out.open('%s' % item.file_name) as tmp_file:
+                        print('Duplicated: %s' % item.file_name)
+                except:
+                    self.out.writestr('%s' % item.file_name, item.get_content())
+
 
     def write(self):
         # check for the option allowZip64
